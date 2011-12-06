@@ -1,0 +1,56 @@
+commit 02ba974efaf3b12f548d83f0584917dfcfd1cb1b
+Author: Miloslav Trmač <mitr@redhat.com>
+Date:   Fri Feb 5 17:53:21 2010 +0100
+
+    Fix crash if passphrase_ui_cb () fails.
+    
+    2010-02-05  Miloslav Trmač  <mitr@redhat.com>
+    
+    	* src/volume_key.c (pos_init): Set *error if passphrase_ui_cb () fails.
+
+diff --git a/ChangeLog b/ChangeLog
+index 72f053b..1ab28d0 100644
+--- a/ChangeLog
++++ b/ChangeLog
+@@ -1,3 +1,7 @@
++2010-02-05  Miloslav Trmač  <mitr@redhat.com>
++
++	* src/volume_key.c (pos_init): Set *error if passphrase_ui_cb () fails.
++
+ 2009-12-11  Miloslav Trmač  <mitr@redhat.com>
+ 
+ 	* configure.ac: Release 0.3.1.
+diff --git a/src/volume_key.c b/src/volume_key.c
+index 361aa86..68c837a 100644
+--- a/src/volume_key.c
++++ b/src/volume_key.c
+@@ -581,7 +581,7 @@ pos_init (struct packet_output_state *pos, GError **error)
+ 					 : _("Passphrases do not match.  "
+ 					     "New packet passphrase"), failed);
+ 	  if (passphrase == NULL)
+-	    return -1;
++	    goto no_passphrase;
+ 	  passphrase2 = passphrase_ui_cb (NULL,
+ 					  _("Repeat new packet passphrase"),
+ 					  failed);
+@@ -589,7 +589,7 @@ pos_init (struct packet_output_state *pos, GError **error)
+ 	    {
+ 	      memset (passphrase, 0, strlen (passphrase));
+ 	      g_free (passphrase);
+-	      return -1;
++	      goto no_passphrase;
+ 	    }
+ 	  passphrase_ok = strcmp (passphrase, passphrase2) == 0;
+ 	  memset (passphrase2, 0, strlen (passphrase2));
+@@ -607,6 +607,11 @@ pos_init (struct packet_output_state *pos, GError **error)
+       pos->passphrase = passphrase;
+     }
+   return 0;
++
++ no_passphrase:
++  g_set_error (error, LIBVK_ERROR, LIBVK_ERROR_UI_NO_RESPONSE,
++	       _("Passphrase not provided"));
++  return -1;
+ }
+ 
+ /* Free data in POS */
